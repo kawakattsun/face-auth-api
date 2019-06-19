@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-face-auth
+  
+  SAM Template for sam-face-auth
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: sam-face-auth
+  Stage:
+    Type: String
+    Default: dev
+  SwaggerBucketName:
+    Type: String
+
+Globals:
+  Function:
+    Runtime: go1.x
+    Timeout: 900
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        -
+          PolicyName: sam-face-auth-lambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action: "dynamodb:*"
+                Resource: "*"
+              -
+                Effect: Allow
+                Action: "logs:*"
+                Resource: "*"
+
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,WWW-Authenticate,x-amz-content-sha256'"
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: !Sub s3://${SwaggerBucketName}/swagger.yml
+
+  PermPostFace:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PostFace
+      Principal: apigateway.amazonaws.com
+
+  PermPostAuth:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PostAuth
+      Principal: apigateway.amazonaws.com
+
+  PostFace:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${PROJECT_NAME}-post-face
+      CodeUri: ./handlers/post-face
+      Role: !GetAtt LambdaRole.Arn
+      Handler: main
+      Events:
+        PostFace:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /v1/face
+            Method: POST
+
+  PostAuth:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${PROJECT_NAME}-post-auth
+      CodeUri: ./handlers/post-auth
+      Role: !GetAtt LambdaRole.Arn
+      Handler: main
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /v1/face
+            Method: POST

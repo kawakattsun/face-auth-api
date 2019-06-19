@@ -1,0 +1,14 @@
+version: "3.7"
+services:
+
+  sam-cli:
+    build:
+      context: ./docker/sam-cli
+    volumes:
+      - .:/go
+
+  golang:
+    build:
+      context: ./docker/golang
+    volumes:
+      - .:/go
