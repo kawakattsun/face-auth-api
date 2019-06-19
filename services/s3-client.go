@@ -1,37 +1,56 @@
 package services
 
 import (
+	"bytes"
 	"os"
-	"github.com/kawakattsun/sam-face-auth/domains"
+	"sync"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/kawakattsun/sam-face-auth/domains"
 )
 
-type s3Client struct {
-	AccessKeyId     string
-	SecretAccessKey string
-	Region          string
+type S3Client struct {
+	accessKeyID     string
+	secretAccessKey string
+	region          string
 	BucketName      string
 }
 
-func getClient() s3Client {
-	return *s3Client{
-		AccessKeyId: os.Getenv("ACCSESS_KEY_ID"),
-		SecretAccessKey: os.Getenv("SECRET_ACCESS_KEY"),
-		Region: os.Getenv("REGION"),
-		BucketName: os.Getenv("BUCKET_NAME")
-	}
+var instance *S3Client
+var once sync.Once
+
+func GetS3Client() *S3Client {
+	once.Do(func() {
+		instance = &S3Client{
+			accessKeyID:     os.Getenv("ACCSESS_KEY_ID"),
+			secretAccessKey: os.Getenv("SECRET_ACCESS_KEY"),
+			region:          os.Getenv("REGION"),
+			BucketName:      os.Getenv("BUCKET_NAME"),
+		}
+	})
+	return instance
 }
 
-func (s *S3Client) Put(image Image) result, error{
-	client := s3.New(&aws.Config{
-		Credentials: credentials.NewStaticCredentials(s.AccessKeyId, s.SecretAccessKey, ""),
-		Region:      s.Region,
+func (s *S3Client) Put(image domains.Image) (string, error) {
+	creds := credentials.NewStaticCredentials(s.accessKeyID, s.secretAccessKey, "")
+	sess, err := session.NewSession(&aws.Config{
+		Credentials: creds,
+		Region:      aws.String(s.region)},
+	)
+	if err != nil {
+		return "", err
+	}
+	client := s3.New(sess)
+	_, err = client.PutObject(&s3.PutObjectInput{
+		Bucket: aws.String(s.BucketName),
+		Key:    aws.String(image.GetName()),
+		Body:   bytes.NewReader(image.GetBody()),
 	})
-	return cli.PutObject(&s3.PutObjectInput{
-        Bucket: aws.String(s.BucketName),
-        Key:    aws.String(image.getName()),
-        Body:   image.getBody(),
-    })
+	if err != nil {
+		return "", err
+	}
+	return "ok", nil
 }

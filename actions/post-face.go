@@ -1,11 +1,12 @@
 package actions
 
 import (
-	"base64"
+	"encoding/base64"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/kawakattsun/domains"
-	res "github.com/kawakattsun/responders/api-gateway-proxy"
+	"github.com/kawakattsun/sam-face-auth/domains"
+	res "github.com/kawakattsun/sam-face-auth/responders"
+	"github.com/kawakattsun/sam-face-auth/services"
 )
 
 func PostFace(request events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
@@ -17,15 +18,12 @@ func PostFace(request events.APIGatewayProxyRequest) events.APIGatewayProxyRespo
 	if err != nil {
 		return res.Response500(err)
 	}
-	face := &domains.Face{
-		Name: req.Name,
-		Body: body,
-	}
-	client := s3.getClient()
-	result, err = client.Put(&face)
+	face := domains.GetFace(req.Name, body)
+	client := services.GetS3Client()
+	_, err = client.Put(face)
 	if err != nil {
 		return res.Response500(err)
 	}
 
-	return res.Response201(result)
+	return res.Response200OK()
 }

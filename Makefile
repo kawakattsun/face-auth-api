@@ -1,10 +1,13 @@
 .PHONY: deps clean build
 
 deps:
-	go get -u ./...
+	dep ensure
+
+lint:
+	sh scripts/go-lint.sh
 
 clean: 
 	rm -rf ./hello-world/hello-world
 	
 build:
-	GOOS=linux GOARCH=amd64 go build -o hello-world/hello-world ./hello-world
+	sh scripts/build-handllers.sh

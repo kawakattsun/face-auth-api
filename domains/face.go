@@ -5,10 +5,17 @@ type Face struct {
 	body []byte
 }
 
-func (f *Face) getName() string {
+func GetFace(name string, body []byte) *Face {
+	return &Face{
+		name: name,
+		body: body,
+	}
+}
+
+func (f *Face) GetName() string {
 	return f.name
 }
 
-func (f *Face) getBody() []byte {
+func (f *Face) GetBody() []byte {
 	return f.body
 }

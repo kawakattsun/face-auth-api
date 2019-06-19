@@ -8,6 +8,20 @@ import (
 	"github.com/golang/glog"
 )
 
+type Response201Body struct {
+	Message string `json:"message"`
+	ID      uint64 `json:"id"`
+}
+
+type Response400Body struct {
+	Message string            `json:"message"`
+	Errors  map[string]string `json:"errors"`
+}
+
+type Response401Body struct {
+	Message string `json:"message"`
+}
+
 func commonHeaders() map[string]string {
 	return map[string]string{
 		"Content-Type":                "application/json",
@@ -48,7 +62,7 @@ func Response400(errs map[string]error) events.APIGatewayProxyResponse {
 	glog.Warningf("%+v", errs)
 	res := &Response400Body{
 		Message: "入力値を確認してください。",
-		Errors:  ConvertErrorsToMessage(errs),
+		Errors:  map[string]string{},
 	}
 
 	b, err := json.Marshal(res)

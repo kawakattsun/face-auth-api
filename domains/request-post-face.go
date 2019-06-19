@@ -6,11 +6,11 @@ import (
 
 type RequestPostFace struct {
 	Name string `json:"name"`
-	body string `json:"body"`
+	Body string `json:"body"`
 }
 
-func (r *RequestPostFace) GetRequestPostFace(body []byte) RequestPostFace, error {
-	req := &r{}
-	err := json.Unmarshal([]byte(body), &req)
-	return req, err
+func GetRequestPostFace(body string) (*RequestPostFace, error) {
+	var r *RequestPostFace
+	err := json.Unmarshal([]byte(body), &r)
+	return r, err
 }
