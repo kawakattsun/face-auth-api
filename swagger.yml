@@ -1,9 +1,9 @@
 swagger: '2.0'
 info:
   title:
-    Fn::Sub: ${ProjectName}
+    Fn::Sub: ${ProjectName}-${Stage}
   description:
-    Fn::Sub: ${ProjectName}
+    Fn::Sub: ${ProjectName}-${Stage}
   version: 1.0.0
 
 schemas:
@@ -13,10 +13,10 @@ consumes:
 produces:
   - application/json
 basePath:
-  Fn::Sub: /
+  Fn::Sub: /${Stage}
 
 paths:
-  /v1/face:
+  /face:
     post:
       x-amazon-apigateway-integration:
         uri:
@@ -25,7 +25,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /v1/auth:
+  /auth:
     post:
       x-amazon-apigateway-integration:
         uri:

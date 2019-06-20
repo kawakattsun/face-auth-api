@@ -12,8 +12,22 @@ Parameters:
   Stage:
     Type: String
     Default: dev
-  SwaggerBucketName:
+  ArtifactBucket:
     Type: String
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General Configuration
+        Parameters:
+          - Stage
+          - ArtifactBucket
+    ParameterLabels:
+      Stage:
+        default: Stage
+      ArtifactBucket:
+        default: Artifact Bucket
 
 Globals:
   Function:
@@ -57,7 +71,7 @@ Resources:
         Fn::Transform:
           Name: AWS::Include
           Parameters:
-            Location: !Sub s3://${SwaggerBucketName}/swagger.yml
+            Location: !Sub s3://${ArtifactBucket}/swagger.yml
 
   PermPostFace:
     Type: AWS::Lambda::Permission
@@ -102,3 +116,7 @@ Resources:
             RestApiId: !Ref ApiGateway
             Path: /v1/face
             Method: POST
+
+Outputs:
+  ApiUrl:
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${Stage

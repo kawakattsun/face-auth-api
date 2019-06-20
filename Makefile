@@ -1,13 +1,18 @@
-.PHONY: deps clean build
+.PHONY: deps clean build deploy
 
 deps:
-	dep ensure
+	@dep ensure
 
 lint:
-	sh scripts/go-lint.sh
+	@sh scripts/go-lint.sh
 
 clean: 
-	rm -rf ./hello-world/hello-world
-	
+	@find handlers -name main -type f | xargs rm -f
+
 build:
-	sh scripts/build-handllers.sh
+	@make deps
+	@make clean
+	@sh scripts/build-handllers.sh
+
+deploy:
+	@sh scripts/deploy.sh
