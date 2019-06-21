@@ -1,14 +1,21 @@
 version: "3.7"
 services:
 
-  sam-cli:
+  sam:
     build:
-      context: ./docker/sam-cli
+      context: ./docker/sam
     volumes:
-      - .:/go
+      - .:/opt/sam
+    working_dir: /opt/sam
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      STACK_NAME: ${STACK_NAME}
 
-  golang:
+  go:
     build:
-      context: ./docker/golang
+      context: ./docker/go
     volumes:
-      - .:/go
+      - .:/opt/go

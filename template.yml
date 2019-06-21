@@ -90,7 +90,7 @@ Resources:
   PostFace:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${PROJECT_NAME}-post-face
+      FunctionName: !Sub ${ProjectName}-post-face
       CodeUri: ./handlers/post-face
       Role: !GetAtt LambdaRole.Arn
       Handler: main
@@ -105,7 +105,7 @@ Resources:
   PostAuth:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${PROJECT_NAME}-post-auth
+      FunctionName: !Sub ${ProjectName}-post-auth
       CodeUri: ./handlers/post-auth
       Role: !GetAtt LambdaRole.Arn
       Handler: main
@@ -119,4 +119,4 @@ Resources:
 
 Outputs:
   ApiUrl:
-    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${Stage
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
