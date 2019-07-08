@@ -2,6 +2,7 @@ package actions
 
 import (
 	"encoding/base64"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/kawakattsun/sam-face-auth/domains"
@@ -14,7 +15,8 @@ func PostFace(request events.APIGatewayProxyRequest) events.APIGatewayProxyRespo
 	if err != nil {
 		return res.Response500(err)
 	}
-	body, err := base64.StdEncoding.DecodeString(req.Body)
+	b64data := req.Body[strings.IndexByte(req.Body, ',')+1:]
+	body, err := base64.StdEncoding.DecodeString(b64data)
 	if err != nil {
 		return res.Response500(err)
 	}
