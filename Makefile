@@ -1,27 +1,36 @@
-.PHONY: deps clean build deploy creat-bucket delete-stack describe-stacks
+DOCKER_SERVICE_GO ?= go
+DOCKER_SERVICE_SAM ?= sam
 
-deps:
-	@dep ensure
+DOCKER_COMPOSE_RUN = docker-compose run --rm
+
+.PHONY: clean build deploy creat-bucket delete-stack describe-stacks create-collection
+
+all:
+	@echo "make all not defined."
 
 lint:
-	@sh scripts/go-lint.sh
+	$(DOCKER_COMPOSE_RUN) $(DOCKER_SERVICE_GO) sh scripts/go-lint.sh
 
 clean: 
-	@find handlers -name main -type f | xargs rm -f
+	find build/deploy/cmd -name main -type f | xargs rm -f
 
-build:
-	@make deps
-	@make clean
-	@sh scripts/build-handllers.sh
+build: lint clean
+	$(DOCKER_COMPOSE_RUN) $(DOCKER_SERVICE_GO) sh scripts/build-handllers.sh
 
-deploy:
-	@sh scripts/deploy.sh
+deploy: build
+	$(DOCKER_COMPOSE_RUN) $(DOCKER_SERVICE_SAM) sh scripts/deploy.sh
 
 create-bucket:
-	@sh scripts/create-bucket.sh
+	$(DOCKER_COMPOSE_RUN) $(DOCKER_SERVICE_SAM) sh scripts/create-bucket.sh
 
 delete-stack:
-	@sh scripts/delete-stack.sh
+	$(DOCKER_COMPOSE_RUN) $(DOCKER_SERVICE_SAM) sh scripts/delete-stack.sh
 
 describe-stacks:
-	@sh scripts/describe-stacks.sh
+	$(DOCKER_COMPOSE_RUN) $(DOCKER_SERVICE_SAM) sh scripts/describe-stacks.sh
+
+create-collection:
+	$(DOCKER_COMPOSE_RUN) $(DOCKER_SERVICE_SAM) sh scripts/create-collection.sh
+
+generate-event:
+	$(DOCKER_COMPOSE_RUN) $(DOCKER_SERVICE_SAM) sh scripts/generate-event.sh

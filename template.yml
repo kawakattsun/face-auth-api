@@ -1,18 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  sam-face-auth
+  face-auth-api
   
-  SAM Template for sam-face-auth
+  SAM Template for face-auth-api
 
 Parameters:
   ProjectName:
     Type: String
-    Default: sam-face-auth
+    Default: face-auth-api
   Stage:
     Type: String
     Default: dev
   ArtifactBucket:
+    Type: String
+  RekognitionCollectionID:
     Type: String
 
 Metadata:
@@ -23,16 +25,23 @@ Metadata:
         Parameters:
           - Stage
           - ArtifactBucket
+          - RekognitionCollectionID
     ParameterLabels:
       Stage:
         default: Stage
       ArtifactBucket:
-        default: Artifact Bucket
+        default: ArtifactBucket
+      RekognitionCollectionID:
+        default: RekognitionCollectionID
 
 Globals:
   Function:
     Runtime: go1.x
+    Handler: main
     Timeout: 900
+    Environment:
+      Variables:
+        TZ: Asia/Tokyo
 
 Resources:
   LambdaRole:
@@ -46,19 +55,55 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        -
-          PolicyName: sam-face-auth-lambda
+        - PolicyName: face-auth-api-lambda
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              -
-                Effect: Allow
-                Action: "dynamodb:*"
-                Resource: "*"
-              -
-                Effect: Allow
+              - Effect: Allow
                 Action: "logs:*"
                 Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "dynamodb:GetItem"
+                  - "dynamodb:DeleteItem"
+                  - "dynamodb:PutItem"
+                  - "dynamodb:Scan"
+                  - "dynamodb:Query"
+                  - "dynamodb:UpdateItem"
+                  - "dynamodb:BatchWriteItem"
+                  - "dynamodb:BatchGetItem"
+                  - "dynamodb:DescribeTable"
+                Resource: !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/collection_faces"
+              - Effect: Allow
+                Action:
+                  - "rekognition:IndexFaces"
+                  - "rekognition:SearchFacesByImage"
+                Resource: !Sub "arn:${AWS::Partition}:rekognition:${AWS::Region}:${AWS::AccountId}:collection/${RekognitionCollectionID}"
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObjectVersion"
+                  - "s3:PutObject"
+                  - "s3:PutObjectAcl"
+                  - "s3:GetLifecycleConfiguration"
+                  - "s3:PutLifecycleConfiguration"
+                  - "s3:DeleteObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+                  - !Sub "arn:aws:s3:::${ProjectName}-face-collection/*"
+
+  CollectionFacesTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: collection_faces
+      PrimaryKey:
+        Name: face_id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
 
   ApiGateway:
     Type: AWS::Serverless::Api
@@ -73,50 +118,94 @@ Resources:
           Parameters:
             Location: !Sub s3://${ArtifactBucket}/swagger.yml
 
-  PermPostFace:
+  PermissionSearchFace:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref PostFace
+      FunctionName: !Ref SearchFace
       Principal: apigateway.amazonaws.com
 
-  PermPostAuth:
+  SearchFace:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-searchface
+      CodeUri: ./build/deploy/cmd/searchface
+      Role: !GetAtt LambdaRole.Arn
+      Events:
+        SearchFace:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /v1/searchface
+            Method: POST
+      Environment:
+        Variables:
+          S3_BUCKET_NAME_COLLECTION: !Sub ${ProjectName}-face-collection
+          REKOGNITION_COLLECTION_ID: !Sub ${RekognitionCollectionID}
+
+  PermissionSaveFace:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref PostAuth
+      FunctionName: !Ref SaveFace
       Principal: apigateway.amazonaws.com
 
-  PostFace:
+  SaveFace:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ProjectName}-post-face
-      CodeUri: ./handlers/post-face
+      FunctionName: !Sub ${ProjectName}-saveface
+      CodeUri: ./build/deploy/cmd/saveface
       Role: !GetAtt LambdaRole.Arn
-      Handler: main
       Events:
-        PostFace:
+        SaveFace:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGateway
-            Path: /v1/face
+            Path: /v1/saveface
             Method: POST
+      Environment:
+        Variables:
+          S3_BUCKET_NAME_COLLECTION: !Sub ${ProjectName}-face-collection
+          REKOGNITION_COLLECTION_ID: !Sub ${RekognitionCollectionID}
 
-  PostAuth:
+  PermissionCollectFace:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CollectFace
+      Principal: s3.amazonaws.com
+
+  CollectFace:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ProjectName}-post-auth
-      CodeUri: ./handlers/post-auth
+      FunctionName: !Sub ${ProjectName}-collectface
+      CodeUri: ./build/deploy/cmd/collectface
       Role: !GetAtt LambdaRole.Arn
-      Handler: main
       Events:
-        CatchAll:
-          Type: Api
+        S3Event:
+          Type: S3
           Properties:
-            RestApiId: !Ref ApiGateway
-            Path: /v1/face
-            Method: POST
+            Bucket: !Ref FaceCollectionBucket
+            Events:
+            - 's3:ObjectCreated:Put'
+      Environment:
+        Variables:
+          S3_BUCKET_NAME_COLLECTION: !Sub ${ProjectName}-face-collection
+          REKOGNITION_COLLECTION_ID: !Sub ${RekognitionCollectionID}
+
+  FaceCollectionBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub ${ProjectName}-face-collection
 
 Outputs:
-  ApiUrl:
+  APIEndpoint:
     Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+  SearchFace:
+    Value: !GetAtt SearchFace.Arn
+  SaveFace:
+    Value: !GetAtt SaveFace.Arn
+  CollectFace:
+    Value: !GetAtt CollectFace.Arn
+  FaceCollectionBucket:
+    Value: !GetAtt FaceCollectionBucket.Arn

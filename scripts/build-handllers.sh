@@ -1,8 +1,8 @@
 #!/bin/bash
 
-dep ensure
+dir=$(cd $(dirname $0); pwd)
 
-find handlers -name main.go -type f \
+find cmd -name main.go -type f \
  | xargs -n 1 dirname \
- | xargs -n 1 -I@ bash -c "cd ./@ && CGO_ENABLED=0 GOOS=linux go build -v -installsuffix cgo -o main . && pwd"
+ | xargs -n 1 -I@ bash -c "cd ./@ && CGO_ENABLED=0 GOOS=linux go build -v -installsuffix cgo -o ${dir}/../build/deploy/@/main . && pwd"
 

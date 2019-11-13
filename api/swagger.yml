@@ -1,0 +1,35 @@
+swagger: '2.0'
+info:
+  title:
+    Fn::Sub: ${ProjectName}-${Stage}
+  description:
+    Fn::Sub: ${ProjectName}-${Stage}
+  version: 1.0.0
+
+schemas:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+basePath:
+  Fn::Sub: /${Stage}
+
+paths:
+  /searchface:
+    post:
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SearchFace.Arn}/invocations
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        type: aws_proxy
+
+  /saveface:
+    post:
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SaveFace.Arn}/invocations
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        type: aws_proxy

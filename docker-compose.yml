@@ -1,9 +1,21 @@
 version: "3.7"
+
 services:
+  go:
+    build:
+      context: ./
+      dockerfile: ./build/docker/go/Dockerfile
+    environment:
+      OWNER_NAME: ${OWNER_NAME}
+      PROJECT_NAME: ${PROJECT_NAME}
+    volumes:
+      - .:/go/src/${OWNER_NAME}/${PROJECT_NAME}
+    working_dir: /go/src/${OWNER_NAME}/${PROJECT_NAME}
+    command: make build
 
   sam:
     build:
-      context: ./docker/sam
+      context: ./build/docker/sam
     volumes:
       - .:/opt/sam
     working_dir: /opt/sam
@@ -11,11 +23,6 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
-      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      S3_BUCKET_NAME_ARTIFACT: ${S3_BUCKET_NAME_ARTIFACT}
       STACK_NAME: ${STACK_NAME}
-
-  go:
-    build:
-      context: ./docker/go
-    volumes:
-      - .:/opt/go
+      REKOGNITION_COLLECTION_ID: ${REKOGNITION_COLLECTION_ID}
