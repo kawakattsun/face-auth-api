@@ -7,7 +7,6 @@ import (
 
 	"github.com/kawakattsun/face-auth-api/pkg/rekognitionservice"
 	"github.com/kawakattsun/face-auth-api/pkg/responder"
-	"github.com/kawakattsun/face-auth-api/pkg/s3service"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/service/rekognition"
@@ -46,10 +45,6 @@ func Handler(request events.APIGatewayProxyRequest) events.APIGatewayProxyRespon
 	req, err := requestBody(request)
 	if err != nil {
 		log.Println("[ERROR] Request error occured.")
-		return responder.Response500(err)
-	}
-	if err := s3service.Put("test.jpeg", req.imageBuffer()); err != nil {
-		log.Println("[ERROR] S3 put error.")
 		return responder.Response500(err)
 	}
 	output, err := rekognitionservice.SearchFace(req.Image)
